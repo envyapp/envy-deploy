@@ -18,7 +18,7 @@ services:
       - envy-network
 
   envy-api:
-    image: ghcr.io/muzafferyalcin/envy-api:1.0.0
+    image: ghcr.io/envyapp/envy-api:1.0.0
     container_name: envy-api
     restart: unless-stopped
     depends_on:
@@ -40,7 +40,7 @@ services:
       - envy-network
 
   envy-web:
-    image: ghcr.io/muzafferyalcin/envy-web:1.0.0
+    image: ghcr.io/envyapp/envy-web:1.0.0
     container_name: envy-web
     restart: unless-stopped
     depends_on:
