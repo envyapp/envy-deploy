@@ -1,0 +1,70 @@
+services:
+  envy-postgres:
+    image: postgres:16
+    container_name: envy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - envy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - envy-network
+
+  envy-api:
+    image: ghcr.io/muzafferyalcin/envy-api:1.0.0
+    container_name: envy-api
+    restart: unless-stopped
+    depends_on:
+      envy-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@envy-postgres:5432/${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: staging
+      AUTO_CREATE_TABLES: "true"
+      AUTO_SEED_RBAC: "true"
+      ENVY_SUPERADMIN_EMAIL: ${ENVY_SUPERADMIN_EMAIL}
+      ENVY_SUPERADMIN_PASSWORD: ${ENVY_SUPERADMIN_PASSWORD}
+      ENVY_BASE_URL: ${ENVY_BASE_URL}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - ./LICENSE.key:/app/LICENSE.key:ro
+    networks:
+      - envy-network
+
+  envy-web:
+    image: ghcr.io/muzafferyalcin/envy-web:1.0.0
+    container_name: envy-web
+    restart: unless-stopped
+    depends_on:
+      - envy-api
+    networks:
+      - envy-network
+
+  envy-nginx:
+    image: nginx:alpine
+    container_name: envy-nginx
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - envy-web
+      - envy-api
+    networks:
+      - envy-network
+
+volumes:
+  envy_pgdata:
+
+networks:
+  envy-network:
+    driver: bridge
